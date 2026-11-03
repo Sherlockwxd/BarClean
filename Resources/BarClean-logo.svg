@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 300" role="img" aria-labelledby="title desc">
+  <title id="title">BarClean</title>
+  <desc id="desc">三层逐渐收拢的图标，搭配 BarClean 字标</desc>
+  <rect width="1120" height="300" fill="#FFFFFF"/>
+  <g transform="translate(10 -25) scale(.37)">
+    <rect x="190" y="260" width="644" height="124" rx="48" fill="#202B29"/>
+    <circle cx="294" cy="322" r="20" fill="#FFFFFF"/>
+    <circle cx="392" cy="322" r="20" fill="#FFFFFF"/>
+    <circle cx="490" cy="322" r="20" fill="#FFFFFF"/>
+    <rect x="252" y="434" width="520" height="116" rx="42" fill="#74C8B0"/>
+    <rect x="330" y="600" width="364" height="104" rx="40" fill="#13A080"/>
+  </g>
+  <text x="392" y="194" font-family="SF Pro Display, Helvetica Neue, Arial, sans-serif" font-size="116" font-weight="700" fill="#202B29">Bar</text>
+  <text x="563" y="194" font-family="SF Pro Display, Helvetica Neue, Arial, sans-serif" font-size="116" font-weight="700" fill="#13A080">Clean</text>
+</svg>

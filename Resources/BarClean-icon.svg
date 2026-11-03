@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">BarClean 应用图标</title>
+  <desc id="desc">三层逐渐收拢的菜单栏图标</desc>
+  <rect x="36" y="36" width="952" height="952" rx="220" fill="#FFFFFF" stroke="#E5EBE8" stroke-width="8"/>
+  <g transform="translate(0 30)">
+    <rect x="190" y="260" width="644" height="124" rx="48" fill="#202B29"/>
+    <circle cx="294" cy="322" r="20" fill="#FFFFFF"/>
+    <circle cx="392" cy="322" r="20" fill="#FFFFFF"/>
+    <circle cx="490" cy="322" r="20" fill="#FFFFFF"/>
+    <rect x="252" y="434" width="520" height="116" rx="42" fill="#74C8B0"/>
+    <rect x="330" y="600" width="364" height="104" rx="40" fill="#13A080"/>
+  </g>
+</svg>
