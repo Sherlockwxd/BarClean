@@ -6,7 +6,7 @@ macOS 27 菜单栏图标收纳工具。点击收纳图标或菜单栏空白处�
 
 ## 下载
 
-[下载 v0.1.0（Apple 芯片）](https://github.com/Sherlockwxd/BarClean/releases/tag/v0.1.0)。解压后将 `BarClean.app` 放入 `/Applications` 再启动；更新前先退出旧版。
+[下载 v0.1.1（Apple 芯片）](https://github.com/Sherlockwxd/BarClean/releases/tag/v0.1.1)。解压后将 `BarClean.app` 放入 `/Applications` 再启动；更新前先退出旧版。
 
 当前版本使用临时签名，未经 Apple 公证。若首次打开被 macOS 拦截，可在“系统设置 → 隐私与安全性”中选择“仍要打开”。
 
