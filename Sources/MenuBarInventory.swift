@@ -26,11 +26,47 @@ struct DrawnMenuBarItem {
 
 @MainActor
 enum MenuBarInventory {
+    private static var clockFrameCache: (frame: CGRect?, expiresAt: TimeInterval)?
+
     static var isTrusted: Bool { AXIsProcessTrusted() }
 
     static func requestPermission() {
         let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
         _ = AXIsProcessTrustedWithOptions(options)
+    }
+
+    static func clockFrame() -> CGRect? {
+        // 鼠标移动事件频繁，避免每次都跨进程遍历菜单栏辅助功能节点。
+        let now = ProcessInfo.processInfo.systemUptime
+        if let cache = clockFrameCache, now < cache.expiresAt { return cache.frame }
+        let frame = isTrusted ? readClockFrame() : nil
+        clockFrameCache = (frame, now + 2)
+        return frame
+    }
+
+    private static func readClockFrame() -> CGRect? {
+        guard let agentPID = NSRunningApplication.runningApplications(
+            withBundleIdentifier: "com.apple.MenuBarAgent"
+        ).first?.processIdentifier,
+              let primaryScreen = NSScreen.screens.first(where: { $0.frame.origin == .zero }) else {
+            return nil
+        }
+        let agent = AXUIElementCreateApplication(agentPID)
+        AXUIElementSetMessagingTimeout(agent, 0.2)
+        for window in children(of: agent, attribute: kAXWindowsAttribute) {
+            for group in children(of: window, attribute: kAXChildrenAttribute) {
+                for item in [group] + children(of: group, attribute: kAXChildrenAttribute) {
+                    var identifier: CFTypeRef?
+                    guard AXUIElementCopyAttributeValue(item, kAXIdentifierAttribute as CFString,
+                                                        &identifier) == .success,
+                          identifier as? String == "com.apple.menuextra.clock",
+                          let frame = frame(of: item) else { continue }
+                    return CGRect(x: frame.minX, y: primaryScreen.frame.height - frame.maxY,
+                                  width: frame.width, height: frame.height)
+                }
+            }
+        }
+        return nil
     }
 
     static func read() throws -> [DrawnMenuBarItem] {

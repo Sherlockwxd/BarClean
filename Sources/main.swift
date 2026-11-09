@@ -14,6 +14,8 @@ final class MenuBarHider: NSObject, NSApplicationDelegate {
     private var mouseMoveMonitor: Any?
     private var localMouseMoveMonitor: Any?
     private var collapseTimer: Timer?
+    private var clockRestoreTimer: Timer?
+    private var clockUnrestricted = false
     private var blankClickMonitor: Any?
     private var localClickMonitor: Any?
     private var statusTrackingArea: NSTrackingArea?
@@ -91,9 +93,9 @@ final class MenuBarHider: NSObject, NSApplicationDelegate {
                 MainActor.assumeIsolated { self?.handleMenuBarClick(event) }
                 return event
             }
+        } else if !autoCollapseEnabled {
             return
         }
-        guard autoCollapseEnabled else { return }
         mouseMoveMonitor = NSEvent.addGlobalMonitorForEvents(matching: .mouseMoved) { [weak self] _ in
             MainActor.assumeIsolated { self?.mouseMoved() }
         }
@@ -107,6 +109,9 @@ final class MenuBarHider: NSObject, NSApplicationDelegate {
     private func stopMouseWatch() {
         collapseTimer?.invalidate()
         collapseTimer = nil
+        clockRestoreTimer?.invalidate()
+        clockRestoreTimer = nil
+        clockUnrestricted = false
         if let mouseMoveMonitor {
             NSEvent.removeMonitor(mouseMoveMonitor)
             self.mouseMoveMonitor = nil
@@ -135,6 +140,10 @@ final class MenuBarHider: NSObject, NSApplicationDelegate {
     }
 
     private func mouseMoved() {
+        if collapsed {
+            updateClockAccess()
+            return
+        }
         guard !collapsed, autoCollapseEnabled, !isApplying, !showingContextMenu,
               settingsWindow?.isVisible != true else { return }
         let mouse = NSEvent.mouseLocation
@@ -157,6 +166,43 @@ final class MenuBarHider: NSObject, NSApplicationDelegate {
         guard !collapsed, autoCollapseEnabled, !isApplying, !showingContextMenu,
               !isInMenuBar(NSEvent.mouseLocation) else { return }
         applyRestriction()
+    }
+
+    private func updateClockAccess() {
+        guard !isApplying, !showingContextMenu else { return }
+        if isOverClock(NSEvent.mouseLocation) {
+            clockRestoreTimer?.invalidate()
+            clockRestoreTimer = nil
+            guard !clockUnrestricted else { return }
+            // 菜单栏限制激活时通知中心拒绝打开；仅在指针位于时钟上方时暂时撤销。
+            bridge.release()
+            clockUnrestricted = true
+        } else if clockUnrestricted, clockRestoreTimer == nil {
+            let timer = Timer(timeInterval: 0.5, repeats: false) { [weak self] _ in
+                MainActor.assumeIsolated { self?.restoreClockRestriction() }
+            }
+            clockRestoreTimer = timer
+            RunLoop.main.add(timer, forMode: .common)
+        }
+    }
+
+    private func restoreClockRestriction() {
+        clockRestoreTimer = nil
+        guard collapsed, clockUnrestricted, !isApplying,
+              !isOverClock(NSEvent.mouseLocation) else { return }
+        applyRestriction()
+    }
+
+    private func isOverClock(_ point: CGPoint) -> Bool {
+        guard isInMenuBar(point),
+              let screen = NSScreen.screens.first(where: { $0.frame.contains(point) }),
+              point.x >= screen.frame.maxX - 280 else { return false }
+        if let frame = MenuBarInventory.clockFrame(),
+           frame.intersects(screen.frame) {
+            return frame.insetBy(dx: -2, dy: -2).contains(point)
+        }
+        // 没有辅助功能权限时无法定位时钟，使用菜单栏最右侧区域兜底。
+        return point.x >= screen.frame.maxX - 220
     }
 
     private func updateMenuBarRegions() {
@@ -212,7 +258,7 @@ final class MenuBarHider: NSObject, NSApplicationDelegate {
     }
 
     private func runningAppsChanged() {
-        if collapsed && !isApplying { applyRestriction() }
+        if collapsed && !isApplying && !clockUnrestricted { applyRestriction() }
     }
 
     @objc private func statusClicked() {
@@ -296,11 +342,11 @@ final class MenuBarHider: NSObject, NSApplicationDelegate {
     private func applyRestriction() {
         stopMouseWatch()
         guard bridge.isAvailable else {
-            showError("当前系统未提供可用的隐藏接口")
+            restrictionFailed("当前系统未提供可用的隐藏接口")
             return
         }
         guard Bundle.main.bundlePath.hasPrefix("/Applications/") else {
-            showError("请将应用放入 /Applications 后重新启动")
+            restrictionFailed("请将应用放入 /Applications 后重新启动")
             return
         }
 
@@ -314,13 +360,20 @@ final class MenuBarHider: NSObject, NSApplicationDelegate {
             guard let self else { return }
             self.isApplying = false
             if let error {
-                self.showError("图标未能收起：\(error.localizedDescription)")
+                self.restrictionFailed("图标未能收起：\(error.localizedDescription)")
             } else {
                 self.collapsed = true
                 self.updateIcon()
                 self.startMouseWatch(visitedMenuBar: false)
             }
         }
+    }
+
+    private func restrictionFailed(_ text: String) {
+        collapsed = false
+        updateIcon()
+        showError(text)
+        startMouseWatch(visitedMenuBar: false)
     }
 
     private func showError(_ text: String) {
